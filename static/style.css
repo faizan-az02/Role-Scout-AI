@@ -125,6 +125,40 @@ body {
   }
 }
 
+.progress-bar-wrap {
+  grid-column: 1 / -1;
+  height: 4px;
+  background: var(--bg-surface);
+  border-radius: 999px;
+  overflow: hidden;
+  opacity: 0;
+  transform: scaleY(0);
+  transform-origin: center top;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.progress-bar-wrap.visible {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+.progress-bar-fill {
+  height: 100%;
+  width: 36%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), #0d9488);
+  animation: progress-indeterminate 1.4s ease-in-out infinite;
+}
+
+@keyframes progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
+
 .card {
   border-radius: 16px;
   padding: 1.5rem 1.75rem;

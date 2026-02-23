@@ -9,14 +9,17 @@
   const detailsBody = document.getElementById("details-body");
   const detailsClose = document.querySelector(".modal-close");
   const submitButton = form.querySelector("button[type='submit']");
+  const progressBarWrap = document.getElementById("progress-bar-wrap");
 
   function setLoading(isLoading) {
     if (isLoading) {
       submitButton.classList.add("loading");
       submitButton.setAttribute("disabled", "disabled");
+      if (progressBarWrap) progressBarWrap.classList.add("visible");
     } else {
       submitButton.classList.remove("loading");
       submitButton.removeAttribute("disabled");
+      if (progressBarWrap) progressBarWrap.classList.remove("visible");
     }
   }
 
