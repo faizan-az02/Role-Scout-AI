@@ -1,0 +1,5 @@
+.env
+Task.pdf
+test_data.csv
+/agents/__pycache__/
+/__pycache__/
