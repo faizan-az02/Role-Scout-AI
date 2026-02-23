@@ -58,7 +58,9 @@ for attempt in range(max_retries + 1):
     research_task = Task(
         description=research_description,
         expected_output="Person's full name and one best source URL.",
-        agent=researcher
+        agent=researcher,
+        verbose=False,
+        allow_delegation=False
     )
 
     # -----------------------
@@ -74,7 +76,9 @@ for attempt in range(max_retries + 1):
             "list of confirming URLs, and reasoning."
         ),
         expected_output="Validation result in structured format.",
-        agent=validator
+        agent=validator,
+        verbose=False,
+        allow_delegation=False
     )
 
     crew = Crew(
@@ -96,6 +100,21 @@ for attempt in range(max_retries + 1):
     # -----------------------
 
     name = extract_name(research_text)
+
+    first_name = None
+    last_name = None
+
+    if name:
+        parts = name.strip().split()
+        if len(parts) >= 2:
+            first_name = parts[0]
+            last_name = parts[-1]
+
+    # Primary source = first URL from research output
+    primary_source = None
+    research_urls = extract_urls(research_text)
+    if research_urls:
+        primary_source = research_urls[0]
 
     # -----------------------
     # Extract URLs
@@ -126,9 +145,11 @@ for attempt in range(max_retries + 1):
     print("Confidence Score:", confidence)
 
     final_output = {
-        "name": name,
+        "first_name": first_name,
+        "last_name": last_name,
         "company": company,
-        "role": designation,
+        "current_title": designation,
+        "primary_source": primary_source,
         "confidence_score": confidence,
         "validation_sources": urls,
         "attempts": attempt + 1
@@ -145,8 +166,17 @@ for attempt in range(max_retries + 1):
         print("\nConfidence too low. Retrying...\n")
 
 # -----------------------
-# Final Output
+# Graceful No Result Handling
 # -----------------------
+
+if not final_output["first_name"] or final_output["confidence_score"] < threshold:
+    final_output = {
+        "error": "No reliable result found",
+        "company": company,
+        "current_title": designation,
+        "confidence_score": confidence,
+        "attempts": attempt + 1
+    }
 
 print("\n=== FINAL STRUCTURED OUTPUT ===\n")
 print(json.dumps(final_output, indent=4))

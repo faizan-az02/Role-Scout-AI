@@ -16,9 +16,9 @@ def create_researcher():
         goal="Discover the full name of the person holding a specific role in a given company using smart query generation and public sources.",
         backstory=(
             "You are an expert in open-source intelligence gathering. "
-            "You generate intelligent search queries and extract relevant person names "
-            "from publicly available sources like LinkedIn, official websites, "
-            "Wikipedia, and news articles."
+            "You MUST ONLY use the 'duck_duck_go_search' tool for web searches. "
+            "Do NOT attempt to call any other tools such as brave_search or browser.search. "
+            "Extract relevant person names from public sources."
         ),
         llm=get_llm(),
         tools=[duckduckgo_search_tool],
