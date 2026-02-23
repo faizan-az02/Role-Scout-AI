@@ -1,5 +1,5 @@
 from crewai import Task, Crew
-from agents.researcher import create_researcher, extract_name
+from agents.researcher import create_researcher
 from agents.validator import create_validator, extract_urls
 from tools.scoring import calculate_confidence
 from tools.alias import title_matches
@@ -10,7 +10,7 @@ import json
 # -----------------------
 
 max_retries = 2
-threshold = 0.6
+threshold = 0.7
 
 company = input("Enter the company: ")
 designation = input("Enter the role: ")
@@ -24,9 +24,28 @@ final_output = None
 # Retry Loop
 # -----------------------
 
+def build_error_output(message, company, designation, attempts, confidence=0.0):
+    return {
+        "error": message,
+        "company": company,
+        "current_title": designation,
+        "confidence_score": confidence,
+        "attempts": attempts
+    }
+
+def generate_query_variations(company, designation):
+    return [
+        f"{designation} of {company} full name official website",
+        f"{company} {designation} LinkedIn profile",
+        f"{company} current {designation} news announcement"
+    ]
+
 for attempt in range(max_retries + 1):
 
     print(f"\n===== ATTEMPT {attempt + 1} =====\n")
+
+    # Generate query variations
+    query_variations = generate_query_variations(company, designation)
 
     # -----------------------
     # Task 1: Research
@@ -37,7 +56,7 @@ for attempt in range(max_retries + 1):
         f"Find the full name of the current {designation} of {company}. "
         "Use the DuckDuckGo search tool if necessary and focus on authoritative sources "
         "such as the company's official website, LinkedIn, or reputable news outlets. "
-        "Return only the person's full name and one best source URL."
+        "Return only the person's full name and one best source URL.\n\n"
         )
 
     elif attempt == 1:
@@ -45,15 +64,23 @@ for attempt in range(max_retries + 1):
             f"Find the full name of the current {designation} of {company}. "
             "Prioritize the company's official website, Wikipedia, or major business news outlets. "
             "Avoid unofficial blogs or speculative content. "
-            "Return only the most reliable source."
+            "Return only the most reliable source.\n\n"
             )
 
     else:
         research_description = (
             f"Find the full name of the current {designation} of {company}. "
             "Strictly verify using official company domain or Wikipedia. "
-            "If confidence is low, indicate uncertainty."
+            "If confidence is low, indicate uncertainty.\n\n"
             )
+
+    # Append query variations WITHOUT changing your original text
+    research_description += (
+        "Try the following search queries one by one using ONLY the 'duck_duck_go_search' tool:\n"
+    )
+
+    for i, query in enumerate(query_variations, 1):
+        research_description += f"{i}. {query}\n"
 
     research_task = Task(
         description=research_description,
@@ -71,11 +98,19 @@ for attempt in range(max_retries + 1):
         description=(
             f"Validate the discovered name for the {designation} of {company}. "
             "Search again using the name, company, and role. "
-            "Confirm the name appears in at least 2 credible sources. "
-            "Return structured output including validated (true/false), "
-            "list of confirming URLs, and reasoning."
+            "Confirm the name appears in at least 2 credible sources.\n\n"
+
+            "Return STRICT JSON in the following format:\n"
+            "{\n"
+            '  "validated": true or false,\n'
+            '  "full_name": "Exact confirmed full name",\n'
+            '  "confirming_urls": ["url1", "url2"],\n'
+            '  "reasoning": "Short explanation"\n'
+            "}\n\n"
+
+            "Do not include any text outside the JSON."
         ),
-        expected_output="Validation result in structured format.",
+        expected_output="Strict JSON validation result.",
         agent=validator,
         verbose=False,
         allow_delegation=False
@@ -87,7 +122,33 @@ for attempt in range(max_retries + 1):
         verbose=False
     )
 
-    crew_output = crew.kickoff()
+    try:
+        crew_output = crew.kickoff()
+    except Exception as e:
+        error_message = str(e)
+
+        if "ratelimit" in error_message.lower() or "429" in error_message:
+            final_output = build_error_output(
+                "LLM rate limit reached",
+                company,
+                designation,
+                attempt + 1
+            )
+        elif "api_key" in error_message.lower():
+            final_output = build_error_output(
+                "Invalid or missing API key",
+                company,
+                designation,
+                attempt + 1
+            )
+        else:
+            final_output = build_error_output(
+                "System execution failure",
+                company,
+                designation,
+                attempt + 1
+            )
+        break
 
     research_text = crew_output.tasks_output[0].raw
     validation_text = crew_output.tasks_output[1].raw
@@ -99,7 +160,24 @@ for attempt in range(max_retries + 1):
     # Extract Name
     # -----------------------
 
-    name = extract_name(research_text)
+    # -----------------------
+# Parse Validation JSON
+# -----------------------
+
+    try:
+        validation_json = json.loads(validation_text)
+    except Exception:
+        final_output = build_error_output(
+            "Validation output parsing failed",
+            company,
+            designation,
+            attempt + 1
+        )
+        break
+
+    validated = validation_json.get("validated", False)
+    name = validation_json.get("full_name")
+    urls = validation_json.get("confirming_urls", [])
 
     first_name = None
     last_name = None
@@ -115,12 +193,6 @@ for attempt in range(max_retries + 1):
     research_urls = extract_urls(research_text)
     if research_urls:
         primary_source = research_urls[0]
-
-    # -----------------------
-    # Extract URLs
-    # -----------------------
-
-    urls = extract_urls(validation_text)
 
     # -----------------------
     # Dynamic Matching
@@ -159,9 +231,14 @@ for attempt in range(max_retries + 1):
     # Stop if confidence good
     # -----------------------
 
-    if confidence >= threshold:
+    if validated:
+        print("\nValidator confirmed identity. Stopping retries.")
+        break
+
+    elif confidence >= threshold:
         print("\nConfidence threshold met. Stopping retries.")
         break
+
     else:
         print("\nConfidence too low. Retrying...\n")
 
@@ -169,14 +246,14 @@ for attempt in range(max_retries + 1):
 # Graceful No Result Handling
 # -----------------------
 
-if not final_output["first_name"] or final_output["confidence_score"] < threshold:
-    final_output = {
-        "error": "No reliable result found",
-        "company": company,
-        "current_title": designation,
-        "confidence_score": confidence,
-        "attempts": attempt + 1
-    }
+if not final_output:
+    final_output = build_error_output(
+        "No reliable result found",
+        company,
+        designation,
+        attempt + 1,
+        0
+    )
 
 print("\n=== FINAL STRUCTURED OUTPUT ===\n")
 print(json.dumps(final_output, indent=4))

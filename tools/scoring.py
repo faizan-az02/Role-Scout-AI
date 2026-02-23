@@ -1,4 +1,3 @@
-import re
 import tldextract
 from duckduckgo_search import DDGS
 

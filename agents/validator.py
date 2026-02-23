@@ -1,8 +1,6 @@
 from crewai import Agent
 from config import get_llm
 from tools.search_tool import duckduckgo_search_tool
-from tools.scoring import calculate_confidence
-
 import re
 
 

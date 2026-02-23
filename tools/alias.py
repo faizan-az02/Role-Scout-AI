@@ -1,65 +1,89 @@
 # tools/alias.py
 
-ROLE_ALIASES = {
-    "ceo": [
-        "ceo",
-        "chief executive officer",
-        "president and ceo",
-        "chief exec officer"
-    ],
-    "cto": [
-        "cto",
-        "chief technology officer",
-        "chief technical officer"
-    ],
-    "cfo": [
-        "cfo",
-        "chief financial officer"
-    ],
-    "coo": [
-        "coo",
-        "chief operating officer"
-    ],
-    "founder": [
-        "founder",
-        "co-founder",
-        "cofounder"
-    ],
-    "president": [
-        "president",
-        "president & ceo"
-    ],
-    "managing director": [
-        "managing director",
-        "md"
-    ]
+import re
+
+# Core role families
+C_LEVEL_MAP = {
+    "ceo": "chief executive officer",
+    "cto": "chief technology officer",
+    "cfo": "chief financial officer",
+    "coo": "chief operating officer",
+    "cmo": "chief marketing officer",
+    "cio": "chief information officer"
 }
 
+SENIORITY_KEYWORDS = [
+    "chief",
+    "head",
+    "director",
+    "manager",
+    "lead",
+    "owner",
+    "founder",
+    "co-founder",
+    "president",
+    "partner",
+    "officer"
+]
 
-def normalize_role(role: str):
-    """
-    Normalize role to lowercase stripped form.
-    """
-    return role.strip().lower()
+
+def normalize_text(text: str) -> str:
+    text = text.lower()
+    text = re.sub(r"[|,&]", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def expand_c_level(designation: str):
+    designation = designation.lower().strip()
+
+    if designation in C_LEVEL_MAP:
+        return [designation, C_LEVEL_MAP[designation]]
+
+    # handle cases like "CEO & Founder"
+    expanded = []
+    words = designation.split()
+
+    for word in words:
+        if word in C_LEVEL_MAP:
+            expanded.append(C_LEVEL_MAP[word])
+            expanded.append(word)
+
+    return expanded
+
+
+def split_compound_title(designation: str):
+    designation = normalize_text(designation)
+
+    # Split by common separators
+    parts = re.split(r" and | & |,|/", designation)
+    return [p.strip() for p in parts if p.strip()]
 
 
 def title_matches(designation: str, text: str) -> bool:
-    """
-    Check if designation or any of its known aliases
-    appear in the given text.
-    """
-    designation_norm = normalize_role(designation)
-    text_lower = text.lower()
+    text = normalize_text(text)
+    designation = normalize_text(designation)
 
-    # Direct match first
-    if designation_norm in text_lower:
+    # 1️⃣ Direct match
+    if designation in text:
         return True
 
-    # Check alias dictionary
-    aliases = ROLE_ALIASES.get(designation_norm, [])
+    # 2️⃣ Compound role handling
+    parts = split_compound_title(designation)
 
-    for alias in aliases:
-        if alias in text_lower:
+    for part in parts:
+        if part in text:
+            return True
+
+    # 3️⃣ C-level expansion
+    expanded = expand_c_level(designation)
+    for variant in expanded:
+        if variant in text:
+            return True
+
+    # 4️⃣ Seniority fallback check
+    for keyword in SENIORITY_KEYWORDS:
+        if keyword in designation and keyword in text:
             return True
 
     return False
