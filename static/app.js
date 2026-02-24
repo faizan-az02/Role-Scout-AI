@@ -10,16 +10,56 @@
   const detailsClose = document.querySelector(".modal-close");
   const submitButton = form.querySelector("button[type='submit']");
   const progressBarWrap = document.getElementById("progress-bar-wrap");
+  const introLoader = document.getElementById("intro-loader");
+  const introQuote = document.getElementById("intro-quote");
+  const runTip = document.getElementById("run-tip");
+  const runTipText = document.getElementById("run-tip-text");
+
+  const warmupQuotes = [
+    "Untangling leadership layers one title at a time.",
+    "Connecting dots between profiles, press, and people pages…",
+    "Filtering signal from noise across the org tree.",
+    "Cross-referencing roles so guesses don’t sneak in.",
+    "Tracking the real decision-maker behind the headline.",
+  ];
+  
+  const runTips = [
+    "Words matter more than you think.",
+    "Sharp titles, sharper results.",
+    "Signal lives in the details.",
+    "Say it clean. Get it clean.",
+    "One tweak can change everything.",
+  ];
+
+  if (introLoader && introQuote) {
+    const picked =
+      warmupQuotes[Math.floor(Math.random() * warmupQuotes.length)] ?? "";
+    introQuote.textContent = picked;
+
+    // Give the backend a moment to warm up before interaction
+    window.setTimeout(() => {
+      introLoader.classList.add("intro-loader--hide");
+    }, 1800);
+  }
 
   function setLoading(isLoading) {
     if (isLoading) {
       submitButton.classList.add("loading");
       submitButton.setAttribute("disabled", "disabled");
       if (progressBarWrap) progressBarWrap.classList.add("visible");
+      if (runTip && runTipText) {
+        const picked =
+          runTips[Math.floor(Math.random() * runTips.length)] ?? "";
+        runTipText.textContent = picked;
+        runTip.classList.add("visible");
+      }
     } else {
       submitButton.classList.remove("loading");
       submitButton.removeAttribute("disabled");
       if (progressBarWrap) progressBarWrap.classList.remove("visible");
+      if (runTip) {
+        runTip.classList.remove("visible");
+      }
     }
   }
 
@@ -71,27 +111,48 @@
     const fullName =
       data.first_name && data.last_name
         ? `${data.first_name} ${data.last_name}`
-        : "Unknown";
+        : "N/A";
 
     const currentTitle = data.current_title || "Couldn't Fetch Title";
 
     const confidence = typeof data.confidence_score === "number" ? data.confidence_score : 0;
     const scoreClass = confidenceClass(confidence);
+    const confidencePercent = Math.round(
+      typeof confidence === "number" && !Number.isNaN(confidence)
+        ? Math.max(0, Math.min(1, confidence)) * 100
+        : 0
+    );
 
     const validationSources = Array.isArray(data.validation_sources)
       ? data.validation_sources
       : [];
 
     const primarySource = data.primary_source || null;
+    const isCached = Boolean(data.cache);
 
     resultContent.innerHTML = `
-      <div class="result-item" style="flex: 1 1 auto;">
+      <div class="result-item result-item--primary" style="flex: 1 1 auto;">
         <span class="result-label">Person</span>
         <span class="result-value result-person-name">${fullName}</span>
         <span class="result-label" style="margin-top:0.4rem;">Current title</span>
         <span class="result-value result-person-title">${currentTitle}</span>
+        <div class="confidence-summary">
+          <div class="confidence-summary-header">
+            <span class="confidence-summary-label">Confidence</span>
+            <span class="confidence-summary-value">${formatScore(
+              confidence
+            )}</span>
+          </div>
+          <div class="confidence-bar">
+            <div
+              class="confidence-bar-fill ${scoreClass}"
+              style="width: ${confidencePercent}%;"
+            ></div>
+          </div>
+          <div class="confidence-bar-percent">${confidencePercent}%</div>
+        </div>
+        <button type="button" class="details-link">Show complete info</button>
       </div>
-      <button type="button" class="details-link">Show complete info</button>
     `;
 
     const detailsLink = resultContent.querySelector(".details-link");
@@ -110,45 +171,55 @@
           )
           .join("");
 
+        const sourcesRow = sourcesListItems
+          ? `<tr>
+               <th>Source URLs</th>
+               <td colspan="3">
+                 <ul class="sources-list">
+                   ${sourcesListItems}
+                 </ul>
+               </td>
+             </tr>`
+          : "";
+
         openDetails(`
-          <div class="result-grid">
-            <div class="result-item">
-              <span class="result-label">Company</span>
-              <span class="result-value">${data.company || "N/A"}</span>
-            </div>
-            <div class="result-item">
-              <span class="result-label">Current Title</span>
-              <span class="result-value">${data.current_title || "N/A"}</span>
-            </div>
-            <div class="result-item">
-              <span class="result-label">Confidence Score</span>
-              <span class="result-value">
-                <span class="result-badge ${scoreClass}">
-                  ${formatScore(confidence)}
-                </span>
-              </span>
-            </div>
-            <div class="result-item">
-              <span class="result-label">Primary Source</span>
-              <span class="result-value">${primarySourceHtml}</span>
-            </div>
-            <div class="result-item">
-              <span class="result-label">Attempts</span>
-              <span class="result-value">${data.attempts ?? "N/A"}</span>
-            </div>
-            <div class="result-item">
-              <span class="result-label">Validation Sources</span>
-              <span class="result-value">${sourcesCount}</span>
-            </div>
+          <div class="details-table-wrapper">
+            <table class="details-table">
+              <tbody>
+                <tr>
+                  <th>Person</th>
+                  <td>${fullName}</td>
+                  <th>Current Title</th>
+                  <td>${data.current_title || "N/A"}</td>
+                </tr>
+                <tr>
+                  <th>Company</th>
+                  <td>${data.company || "N/A"}</td>
+                  <th>Confidence score</th>
+                  <td>
+                    <span class="result-badge ${scoreClass}">
+                      ${formatScore(confidence)}
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <th>Attempts</th>
+                  <td>${data.attempts ?? "N/A"}</td>
+                  <th>Validation Sources</th>
+                  <td>${sourcesCount}</td>
+                </tr>
+                <tr>
+                  <th>Primary Source</th>
+                  <td colspan="3">${primarySourceHtml}</td>
+                </tr>
+                <tr>
+                  <th>Cached</th>
+                  <td colspan="3">${isCached ? "Yes" : "No"}</td>
+                </tr>
+                ${sourcesRow}
+              </tbody>
+            </table>
           </div>
-          ${
-            sourcesListItems
-              ? `<div class="result-item" style="margin-top:0.75rem;">
-                   <span class="result-label">Source URLs</span>
-                   <ul class="sources-list">${sourcesListItems}</ul>
-                 </div>`
-              : ""
-          }
         `);
       });
     }

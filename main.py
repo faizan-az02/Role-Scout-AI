@@ -3,6 +3,7 @@ from agents.researcher import create_researcher
 from agents.validator import create_validator, extract_urls
 from tools.scoring import calculate_confidence
 from tools.alias import title_matches
+from cache import get_cached_result, set_cached_result
 import json
 
 # -----------------------
@@ -15,8 +16,19 @@ threshold = 0.7
 company = input("Enter the company: ")
 designation = input("Enter the role: ")
 
+# -----------------------
+# Cache Check
+# -----------------------
+cached = get_cached_result(company, designation)
+if cached:
+    print("\n=== FINAL STRUCTURED OUTPUT ===\n")
+    print(json.dumps(cached, indent=4))
+    raise SystemExit(0)
+
 researcher = create_researcher()
 validator = create_validator()
+
+print("Cache Miss")
 
 final_output = None
 
@@ -30,7 +42,8 @@ def build_error_output(message, company, designation, attempts, confidence=0.0):
         "company": company,
         "current_title": designation,
         "confidence_score": confidence,
-        "attempts": attempts
+        "attempts": attempts,
+        "cache": False,
     }
 
 def generate_query_variations(company, designation):
@@ -254,6 +267,13 @@ if not final_output:
         attempt + 1,
         0
     )
+
+# Mark non-cached responses explicitly
+if isinstance(final_output, dict) and "cache" not in final_output:
+    final_output["cache"] = False
+
+# Persist successful responses to cache
+set_cached_result(company, designation, final_output)
 
 print("\n=== FINAL STRUCTURED OUTPUT ===\n")
 print(json.dumps(final_output, indent=4))

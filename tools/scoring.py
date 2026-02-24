@@ -6,10 +6,15 @@ from duckduckgo_search import DDGS
 # -----------------------------
 
 CREDIBILITY_SCORES = {
-    "official": 0.40,
-    "wikipedia": 0.25,
-    "news": 0.20,
-    "linkedin": 0.10,
+    # Official company domains should carry most of the weight
+    "official": 0.55,
+    # Wikipedia is usually very strong for senior roles
+    "wikipedia": 0.35,
+    # Reputable news outlets add extra confidence
+    "news": 0.25,
+    # LinkedIn is helpful but can be out of date
+    "linkedin": 0.15,
+    # Everything else is weak signal
     "other": 0.05,
 }
 
@@ -111,17 +116,17 @@ def calculate_confidence(
         if root:
             unique_domains.add(root)
 
-    # Cross-source bonus
+    # Cross-source bonus: reward corroboration but cap it fairly low,
+    # since high-quality primary sources already carry strong weight.
     if len(unique_domains) > 1:
-        cross_bonus = min(0.30, 0.10 * (len(unique_domains) - 1))
+        cross_bonus = min(0.20, 0.08 * (len(unique_domains) - 1))
         score += cross_bonus
 
-    # Title bonus
+    # Title and company match bonuses: keep them modest so source quality dominates.
     if title_match:
-        score += 0.10
+        score += 0.05
 
-    # Company match bonus
     if company_match:
-        score += 0.10
+        score += 0.05
 
     return min(1.0, round(score, 2))
