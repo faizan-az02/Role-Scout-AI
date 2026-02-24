@@ -68,14 +68,23 @@ def discover_official_domain(company_name: str):
 # Step 2: Classify Source Properly
 # -----------------------------
 
-def classify_source(url: str, official_domain: str):
+def classify_source(url: str, official_domain: str, company_name: str | None = None):
     root = get_root_domain(url)
 
     if not root:
         return "other"
 
+    # Treat as official if it matches the discovered official domain
     if official_domain and root == official_domain:
         return "official"
+
+    # Fallback: if we have no official_domain, infer it from the company name
+    # so that domains like "facebook.com" or "apple.com" are still treated
+    # as official even when discovery fails or is rate-limited.
+    if company_name:
+        slug = company_name.lower().split()[0]
+        if slug and slug in root:
+            return "official"
 
     if "wikipedia.org" in root:
         return "wikipedia"
@@ -109,7 +118,7 @@ def calculate_confidence(
     official_domain = discover_official_domain(company_name)
 
     for url in urls:
-        source_type = classify_source(url, official_domain)
+        source_type = classify_source(url, official_domain, company_name)
         score += CREDIBILITY_SCORES[source_type]
 
         root = get_root_domain(url)
