@@ -8,6 +8,9 @@ Role Scout AI is a **CrewAI‑powered OSINT assistant** that takes a **company**
 - Stores and serves results from a **Redis cache** for fast repeat lookups  
 - Presents results in a modern web UI with **single lookups**, **CSV batch runs**, and **PDF/CSV reports**
 
+### Video Link:
+- https://drive.google.com/file/d/1cQkVhNtUNAD0sExyXUPtnvhi_QU6CXJu/view?usp=drive_link
+
 ### Tech Stack
 - **CrewAI** for Orchestration and Agents
 - **Redis** for Cache
