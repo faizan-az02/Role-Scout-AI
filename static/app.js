@@ -14,6 +14,11 @@
   const introQuote = document.getElementById("intro-quote");
   const runTip = document.getElementById("run-tip");
   const runTipText = document.getElementById("run-tip-text");
+  const reportForm = document.getElementById("report-form");
+  const reportPayloadInput = document.getElementById("report-payload");
+  const openReportBtn = document.getElementById("open-report-btn");
+
+  let lastResult = null;
 
   const warmupQuotes = [
     "Untangling leadership layers one title at a time.",
@@ -96,6 +101,7 @@
   }
 
   function renderResult(data) {
+    lastResult = data;
     resultPlaceholder.classList.add("hidden");
     resultContent.classList.remove("hidden");
 
@@ -276,6 +282,18 @@
   if (detailsClose) {
     detailsClose.addEventListener("click", () => {
       closeDetails();
+    });
+  }
+
+  if (openReportBtn && reportForm && reportPayloadInput) {
+    openReportBtn.addEventListener("click", () => {
+      if (!lastResult) return;
+      try {
+        reportPayloadInput.value = JSON.stringify(lastResult);
+        reportForm.submit();
+      } catch (e) {
+        console.error("Failed to submit report form", e);
+      }
     });
   }
 

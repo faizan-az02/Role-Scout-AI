@@ -1,5 +1,5 @@
 import tldextract
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 
 # -----------------------------
 # Source Credibility Weights
@@ -138,4 +138,4 @@ def calculate_confidence(
     if company_match:
         score += 0.05
 
-    return min(1.0, round(score, 2))
+    return min(0.95, round(score, 2))

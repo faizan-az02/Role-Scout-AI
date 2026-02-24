@@ -812,6 +812,30 @@ body {
   display: block;
 }
 
+.modal-footer {
+  margin-top: 0.9rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.report-btn {
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  padding: 0.45rem 0.95rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: rgba(15, 23, 42, 0.95);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.report-btn:hover {
+  background: rgba(15, 23, 42, 1);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .details-table-wrapper {
   max-width: 100%;
   overflow-x: auto;

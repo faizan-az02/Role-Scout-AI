@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <title>Role Scout AI</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='fav.svg') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
   </head>
   <body>
@@ -124,6 +125,9 @@
               <button type="button" class="modal-close" aria-label="Close details">&times;</button>
             </div>
             <div id="details-body" class="modal-body"></div>
+            <div class="modal-footer">
+              <button type="button" id="open-report-btn" class="report-btn">View Full Report</button>
+            </div>
           </div>
         </div>
       </main>
@@ -132,6 +136,10 @@
         <span>Powered by CrewAI</span>
       </footer>
     </div>
+
+    <form id="report-form" action="{{ url_for('report_pdf') }}" method="POST" target="_blank" class="hidden">
+      <input type="hidden" name="payload" id="report-payload" />
+    </form>
 
     <script src="{{ url_for('static', filename='app.js') }}"></script>
   </body>
