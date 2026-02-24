@@ -82,6 +82,11 @@
             <button type="button" class="chip" data-company="Google" data-role="CFO">Google · CFO</button>
           </div>
 
+          <label class="form-or-label">OR</label>
+          <div class="example-chips" aria-label="Upload CSV">
+            <button type="button" class="chip" id="upload-csv-btn">Upload CSV</button>
+          </div>
+
           <div id="error-box" class="alert alert--error hidden"></div>
         </section>
 
@@ -140,6 +145,42 @@
     <form id="report-form" action="{{ url_for('report_pdf') }}" method="POST" target="_blank" class="hidden">
       <input type="hidden" name="payload" id="report-payload" />
     </form>
+
+    <form
+      id="csv-form"
+      action="{{ url_for('csv_report') }}"
+      method="POST"
+      enctype="multipart/form-data"
+      target="_blank"
+      class="hidden"
+    >
+      <input type="file" name="csv_file" id="csv-file-input" accept=".csv" />
+    </form>
+
+    <div id="csv-backdrop" class="modal-backdrop hidden">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="csv-modal-title">
+        <div class="modal-header">
+          <h3 id="csv-modal-title">CSV BATCH LOOKUP</h3>
+          <button type="button" class="modal-close" id="csv-modal-close" aria-label="Close CSV dialog">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p id="csv-file-name" class="csv-modal-note">No file selected yet.</p>
+          <p id="csv-total-rows" class="csv-modal-note">Total rows detected: &mdash;</p>
+          <p class="csv-modal-note">We will process up to 5 rows to keep API usage reasonable.</p>
+          <div class="csv-progress">
+            <div id="csv-progress-label" class="csv-progress-label">Waiting to start…</div>
+            <div class="csv-progress-bar">
+              <div id="csv-progress-bar-fill" class="csv-progress-bar-fill"></div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="report-btn" id="csv-cancel-btn">Cancel</button>
+          <button type="button" class="report-btn" id="csv-run-btn">Run on CSV</button>
+          <button type="button" class="report-btn report-btn--primary" id="csv-view-report-btn" disabled>View Report</button>
+        </div>
+      </div>
+    </div>
 
     <script src="{{ url_for('static', filename='app.js') }}"></script>
   </body>
