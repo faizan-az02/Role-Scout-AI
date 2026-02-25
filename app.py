@@ -3,13 +3,13 @@ from __future__ import annotations
 import csv
 import json
 import re
-import subprocess
-import sys
 import uuid
 from io import BytesIO, StringIO
 from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request, send_file, url_for
+
+from lookup_service import run_lookup  # shared backend lookup pipeline
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -26,46 +26,6 @@ _BATCH_PDF_DOWNLOADS: dict[str, bytes] = {}
 
 from reporter import build_report  # noqa: E402
 from report_pdf import generate_batch_csv_pdf, generate_report_pdf  # noqa: E402
-
-
-def _extract_final_json(stdout: str) -> dict:
-    """
-    Extract the final JSON object printed by the existing CLI (main.py)
-    without modifying any of its logic.
-    """
-    last_brace_index = stdout.rfind("{")
-    if last_brace_index == -1:
-        raise ValueError("No JSON object found in CLI output.")
-
-    json_text = stdout[last_brace_index:]
-    return json.loads(json_text)
-
-
-def run_lookup(company: str, role: str) -> dict:
-    """
-    Adapter around the existing CLI-based main.py.
-
-    It:
-    - Executes main.py as a subprocess.
-    - Feeds company and role via stdin (as the CLI expects).
-    - Parses the final JSON printed by main.py.
-
-    IMPORTANT: Does not modify or depend on any internal logic of main.py.
-    """
-    proc = subprocess.run(
-        [sys.executable, "main.py"],
-        input=f"{company}\n{role}\n",
-        text=True,
-        capture_output=True,
-        cwd=str(BASE_DIR),
-    )
-
-    if proc.returncode != 0:
-        # Surface combined output for easier debugging in the API error response.
-        combined = (proc.stderr or "") + "\n" + (proc.stdout or "")
-        raise RuntimeError(f"Lookup process failed with code {proc.returncode}: {combined}")
-
-    return _extract_final_json(proc.stdout)
 
 
 @app.route("/", methods=["GET"])
