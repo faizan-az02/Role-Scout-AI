@@ -20,13 +20,13 @@ Role Scout AI is a **CrewAI‑powered OSINT assistant** that takes a **company**
 ### High‑level architecture
 
 - **`main.py`**  
-  - CLI entrypoint used by the web app via subprocess.  
+  - CLI entrypoint that calls the shared lookup pipeline in `tools/lookup.py` when run from the terminal.  
   - Orchestrates a **CrewAI `Crew`** with two agents:
     - `Researcher` – runs DuckDuckGo queries, finds candidate names & sources.
     - `Validator` – cross‑checks the name across multiple sources and outputs strict JSON.
   - Implements a retry loop with **increasingly strict prompts** and query variations.
   - Computes a **confidence score** using `tools/scoring.py` and writes a final structured JSON result.
-  - Reads/writes from **Redis** via `cache.py` to avoid re‑running expensive lookups.
+  - Reads/writes from **Redis** via `tools/cache.py` to avoid re‑running expensive lookups.
 
 - **Agents (`agents/researcher.py`, `agents/validator.py`)**
   - Wrap CrewAI `Agent` definitions with roles, goals, and tools.
@@ -40,19 +40,19 @@ Role Scout AI is a **CrewAI‑powered OSINT assistant** that takes a **company**
     - Handles compound titles like “CEO & Founder”
     - Provides `title_matches()` to check if the validated text really talks about the requested role.
 
-- **Cache (`cache.py`)**
+- **Cache (`tools/cache.py`)**
   - Uses **Redis** (config via `REDIS_URL`) to cache successful lookups.
   - Keys shaped as `lookup:<company>:<role>` (lower‑cased).
   - Adds `cache: true` when a response is served from cache; writes non‑error responses with a TTL.
 
 - **Web app (`app.py`)**
-  - Flask app that **adapts the existing CLI (`main.py`)** without touching its internal logic.
+  - Flask app that shares the same lookup pipeline as `main.py` via `tools/lookup.run_lookup`.
   - Routes:
     - `GET /` – serves the HTML UI.
     - `POST /lookup` – JSON API:
-      - Calls `run_lookup(company, role)` which shells out to `python main.py` and parses the final JSON.
-      - Attaches a presentation‑friendly `report` via `reporter.build_report`.
-    - `POST /report` – generates a **single‑lookup PDF** using `report_pdf.generate_report_pdf`.
+      - Calls `tools.lookup.run_lookup(company, role)` directly to obtain the final JSON.
+      - Attaches a presentation‑friendly `report` via `agents.reporter.build_report`.
+    - `POST /report` – generates a **single‑lookup PDF** using `tools.report_pdf.generate_report_pdf`.
     - `POST /csv-report` – legacy form endpoint that still supports direct CSV→PDF if needed.
     - `POST /batch-report-pdf` – **JSON endpoint used by the CSV modal**:
       - Accepts an array of per‑row lookup results.
@@ -62,10 +62,10 @@ Role Scout AI is a **CrewAI‑powered OSINT assistant** that takes a **company**
     - `GET /pdf-download/<token>` – one‑time PDF download for batch runs.
 
 - **Presentation & reporting**
-  - `reporter.py` – shapes raw lookup output into a human‑friendly report object:
+  - `agents/reporter.py` – shapes raw lookup output into a human‑friendly report object:
     - Proper‑cases company and role for consistent display.
     - Bins confidence into **High / Medium / Low** bands with explanations.
-  - `report_pdf.py` – builds **ReportLab** PDFs:
+  - `tools/report_pdf.py` – builds **ReportLab** PDFs:
     - Single‑lookup one‑pager (headline, confidence, summary, primary + validation sources).
     - Batch CSV report:
       - Table of up to **5 rows** from the CSV batch.
@@ -103,8 +103,8 @@ The UI is plain HTML/CSS/JS served by Flask:
 
 1. User submits **company** + **role** in the web UI.  
 2. `app.py` → `POST /lookup`:
-   - Calls `run_lookup(company, role)` which runs `main.py` as a subprocess.
-3. `main.py`:
+   - Calls `tools.lookup.run_lookup(company, role)` directly (no subprocess), using the same pipeline as the CLI.
+3. `main.py` (CLI path):
    - Checks **Redis cache**; if hit, returns cached JSON (with `cache: true`).
    - If miss:
      - Builds **query variations** from company + designation.
