@@ -1,6 +1,7 @@
-import redis
 import json
 import os
+
+import redis
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
@@ -62,3 +63,4 @@ def set_cached_result(company: str, role: str, result: dict, ttl: int = 86400):
     except Exception:
         # Ignore cache write failures so lookups still succeed
         return
+

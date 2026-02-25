@@ -9,7 +9,9 @@ from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request, send_file, url_for
 
-from lookup_service import run_lookup  # shared backend lookup pipeline
+from tools.lookup import run_lookup
+from agents.reporter import build_report  # moved into agents/
+from tools.report_pdf import generate_batch_csv_pdf, generate_report_pdf
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -23,9 +25,6 @@ app = Flask(
 # In-memory store for generated batch CSVs/PDFs keyed by a one-time token.
 _BATCH_CSV_DOWNLOADS: dict[str, bytes] = {}
 _BATCH_PDF_DOWNLOADS: dict[str, bytes] = {}
-
-from reporter import build_report  # noqa: E402
-from report_pdf import generate_batch_csv_pdf, generate_report_pdf  # noqa: E402
 
 
 @app.route("/", methods=["GET"])

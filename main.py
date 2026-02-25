@@ -1,4 +1,4 @@
-from lookup_service import run_lookup
+from tools.lookup import run_lookup
 
 company = input("Enter the company: ")
 designation = input("Enter the role: ")

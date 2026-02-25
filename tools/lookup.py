@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 """
-Shared lookup service used by both the CLI (main.py) and the Flask app.
+Lookup pipeline shared by CLI (main.py) and the Flask app.
 
-IMPORTANT:
-- This module only restructures the existing logic from main.py.
+NOTE:
+- This is structurally identical to the previous lookup_service implementation.
 - Business logic, prompts, retry flow, scoring, alias handling, validation,
-  and cache behavior are kept IDENTICAL to the original implementation.
+  and cache behavior are preserved as-is.
 """
 
 import json
@@ -15,7 +15,7 @@ from crewai import Crew, Task
 
 from agents.researcher import create_researcher
 from agents.validator import create_validator, extract_urls
-from cache import get_cached_result, set_cached_result
+from tools.cache import get_cached_result, set_cached_result
 from tools.alias import title_matches
 from tools.scoring import calculate_confidence
 
@@ -56,11 +56,6 @@ threshold = 0.7
 def run_lookup(company: str, role: str) -> dict:
     """
     Execute the full lookup pipeline for a given company and role.
-
-    This is a direct extraction of the logic that previously lived at
-    top-level in main.py, so that:
-    - main.py can call it for CLI usage
-    - the Flask app can import and call it directly (no subprocess)
     """
     designation = role  # Preserve original variable name used throughout the logic.
 
